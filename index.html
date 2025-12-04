@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
- <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS52zXpkvHeVVKTElcquqykAs1EdLJWuKnHeQ&s" sizes="16×16" type="image/png" />    
+<link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS52zXpkvHeVVKTElcquqykAs1EdLJWuKnHeQ&s" sizes="16×16" type="image/png" />       
 <title>ソリティア</title>
 <style>
   :root{
@@ -19,6 +19,7 @@
   header{display:flex;align-items:center;justify-content:space-between;gap:12px}
   h1{font-size:1rem;margin:0}
   .controls{display:flex;gap:8px;align-items:center}
+  .control-bar{position:fixed;top:0;left:0;width:100%;background:var(--bg-dark-2);padding:8px 12px;box-shadow:0 4px 20px rgba(0,0,0,0.35);z-index:3000;backdrop-filter:blur(6px)}display:flex;gap:8px;align-items:center}
   button{background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:var(--text-light);padding:8px 10px;border-radius:10px;cursor:pointer}
   .status{display:flex;gap:8px;align-items:center}
 
@@ -75,6 +76,9 @@
   .ghost{opacity:0.95;transform:scale(1.02);z-index:9999}
   .dragging{box-shadow:0 22px 44px rgba(0,0,0,0.6);transform:translateY(-6px) scale(1.02)}
 
+  /* selected (keyboard) */
+  .selected{outline:3px solid rgba(255,255,255,0.12);transform:translateY(-4px)}
+
   /* responsive tweaks */
   @media (max-width:720px){
     .slot{width:64px;height:96px}
@@ -93,7 +97,7 @@
   .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card-front);color:var(--text-light);padding:18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);z-index:2000}
 
   footer{margin-top:8px;color:rgba(255,255,255,0.6);font-size:0.85rem}
-footer {
+ footer {
            padding: 30px;
            text-align: center;
            font-size: 0.85rem;
@@ -107,14 +111,14 @@ footer {
   <div class="app" id="app">
     <header>
       <h1>ソリティア</h1>
-      <div class="controls">
-        <button id="newBtn">新しいゲーム(N)</button>
-        <button id="undoBtn">元に戻す(Z)</button>
-        <button id="redealBtn">再配布(R)</button>
-        <button id="hintBtn">ヒント(H)</button>
-        <button id="autoBtn">自動ソート(A)</button>
+      <div class="controls control-bar">
+        <button id="newBtn">新しいゲーム</button>
+        <button id="undoBtn">元に戻す</button>
+        <button id="hintBtn">ヒント</button>
+        <button id="autoBtn">自動ソート</button>
+        <button id="redealBtn">再配布</button>
         <button id="settingsBtn">設定</button>
-        <div class="status" style="margin-left:8px"><div id="moves">Moves: 0</div><div id="time">00:00</div><div id="score" style="margin-left:8px">Score: 0</div></div>
+        <div class="status"><div id="moves">Moves: 0</div><div id="score">Score: 0</div><div id="time">00:00</div></div>
       </div>
     </header>
 
@@ -161,7 +165,7 @@ footer {
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button id="saveSettings">保存</button><button id="cancelSettings">キャンセル</button></div>
   </div>
 
-  <footer>
+ <footer>
        © 2025 STAR CORPORATION - All Rights Reserved.
    </footer>
 
@@ -169,14 +173,12 @@ footer {
 (function () {
   'use strict';
 
-  // === constants ===
   const SUITS = ['♠','♥','♦','♣'];
   const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
-  // === state ===
   let deck = [];
-  let stock = [];      // faceDown cards in stock (objects)
-  let waste = [];      // faceUp waste (objects)
+  let stock = [];
+  let waste = [];
   let foundations = [[],[],[],[]];
   let columns = [[],[],[],[],[],[],[]];
 
@@ -185,20 +187,17 @@ footer {
   let timerInterval = null;
   let history = [];
   let drawCount = 1;
-
   let score = 0;
 
-  // === DOM refs ===
   const stockEl = document.getElementById('stock');
   const wasteEl = document.getElementById('waste');
   const tableau = document.getElementById('tableau');
   const movesEl = document.getElementById('moves');
   const timeEl = document.getElementById('time');
-  const scoreEl = document.getElementById('score');
   const hintBtn = document.getElementById('hintBtn');
   const autoBtn = document.getElementById('autoBtn');
+  const scoreEl = document.getElementById('score');
 
-  // === helpers ===
   function makeDeck() {
     const d = [];
     SUITS.forEach(function (s, i) {
@@ -209,17 +208,21 @@ footer {
     return d;
   }
 
-  function shuffleArray(a) {
+  function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+      const tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
     }
   }
 
   function saveHistory() {
     try {
       history.push(JSON.stringify({ stock: stock, waste: waste, foundations: foundations, columns: columns, moves: moves, seconds: seconds, score: score }));
-      if (history.length > 250) history.shift();
+      if (history.length > 250) {
+        history.shift();
+      }
     } catch (err) {
       // ignore
     }
@@ -259,12 +262,10 @@ footer {
     timeEl.textContent = m + ':' + s;
   }
 
-  // === game start / deal ===
   function newGame() {
     deck = makeDeck();
-    shuffleArray(deck);
-    // convert deck into objects for stock
-    stock = deck.slice().map(c => Object.assign({}, c, { faceUp: false }));
+    shuffle(deck);
+    stock = deck.slice();
     waste = [];
     foundations = [[],[],[],[]];
     columns = [[],[],[],[],[],[],[]];
@@ -273,7 +274,6 @@ footer {
     history = [];
     score = 0;
 
-    // deal to columns (Klondike)
     for (let i = 0; i < 7; i++) {
       for (let j = 0; j <= i; j++) {
         const card = stock.pop();
@@ -292,11 +292,14 @@ footer {
     while (el.firstChild) el.removeChild(el.firstChild);
   }
 
-  // create DOM card from card object
-  function renderCard(card) {
+  function renderCard(card, isFoundation) {
     const c = document.createElement('div');
     c.className = 'card';
-    if (!card.faceUp) c.classList.add('back');
+    if (!card.faceUp) {
+      c.classList.add('back');
+    } else {
+      c.classList.remove('back');
+    }
     const color = (card.suit === '♥' || card.suit === '♦') ? 'red' : 'black';
     c.classList.add(color);
     c.dataset.id = card.id;
@@ -316,13 +319,11 @@ footer {
       c.appendChild(bot);
     }
 
-    // pointer events attached elsewhere via observer (but safe to attach)
     c.addEventListener('pointerdown', onPointerDown);
     c.addEventListener('click', onCardClick);
     return c;
   }
 
-  // render entire board
   function render() {
     clearElement(stockEl);
     clearElement(wasteEl);
@@ -330,22 +331,21 @@ footer {
       const f = document.getElementById('f' + i);
       clearElement(f);
       if (foundations[i].length) {
-        f.appendChild(renderCard(foundations[i][foundations[i].length - 1]));
+        f.appendChild(renderCard(foundations[i][foundations[i].length - 1], true));
       }
     }
 
     if (stock.length) {
-      // Show stack as overlapped backs
-      const count = Math.min(stock.length, 6);
-      for (let i = 0; i < count; i++) {
+      // show stacked backs
+      const stackCount = Math.min(stock.length, 4);
+      for (let i = 0; i < stackCount; i++) {
         const back = document.createElement('div');
         back.className = 'card back';
         back.style.position = 'absolute';
-        back.style.left = (i * 3) + 'px';
-        back.style.top = (i * 2) + 'px';
+        back.style.left = (i * 6) + 'px';
+        back.style.top = (i * 4) + 'px';
         back.style.width = '70%';
         back.style.height = '80%';
-        back.style.transform = 'translate(0,0)';
         stockEl.appendChild(back);
       }
       stockEl.classList.remove('empty');
@@ -366,7 +366,7 @@ footer {
       col.appendChild(area);
       columns[i].forEach(function (card, idx) {
         const cardEl = renderCard(card);
-        cardEl.style.top = (idx * 26) + 'px';
+        cardEl.style.top = (idx * 28) + 'px';
         cardEl.style.left = '6px';
         cardEl.dataset.col = i;
         cardEl.dataset.idx = idx;
@@ -375,19 +375,17 @@ footer {
     });
 
     checkWin(false);
-    updateStatus();
   }
 
-  // find card object location
   function findCardById(id) {
     for (let col of columns) {
       for (let c of col) {
         if (c.id === id) return { where: 'col', col: col, card: c };
       }
     }
-    for (let fi = 0; fi < foundations.length; fi++) {
-      for (let c of foundations[fi]) {
-        if (c.id === id) return { where: 'found', foundIndex: fi, found: foundations[fi], card: c };
+    for (let f of foundations) {
+      for (let c of f) {
+        if (c.id === id) return { where: 'found', found: f, card: c };
       }
     }
     for (let c of waste) {
@@ -414,7 +412,6 @@ footer {
     return top.suit === card.suit && card.value === top.value + 1;
   }
 
-  // click handlers (tap)
   function onCardClick(e) {
     e.stopPropagation();
     const el = e.currentTarget;
@@ -422,7 +419,6 @@ footer {
     const found = findCardById(id);
     if (!found) return;
 
-    // flip face-down last card in column
     if (found.where === 'col') {
       const col = found.col;
       const card = found.card;
@@ -431,7 +427,7 @@ footer {
         saveHistory();
         card.faceUp = true;
         moves++;
-        score += 5; // reward for flipping
+        score += 5;
         updateStatus();
         render();
         return;
@@ -446,7 +442,7 @@ footer {
 
     if (found.where === 'waste' || found.where === 'col') {
       const card = (found.where === 'waste') ? waste[waste.length - 1] : found.card;
-      // try foundation first
+      // try foundation
       for (let i = 0; i < 4; i++) {
         if (canPlaceOnFoundation(card, i)) {
           saveHistory();
@@ -454,20 +450,18 @@ footer {
           else {
             const col = found.col;
             col.splice(col.indexOf(card), 1);
-            if (col.length && !col[col.length - 1].faceUp) {
-              col[col.length - 1].faceUp = true;
-              score += 5;
-            }
+            if (col.length && !col[col.length - 1].faceUp) col[col.length - 1].faceUp = true;
           }
           foundations[i].push(card);
           moves++;
-          score += 10;
+          score += 50;
           updateStatus();
           render();
           return;
         }
       }
-      // then try columns
+
+      // try columns
       for (let ci = 0; ci < 7; ci++) {
         if (canPlaceOnColumn(card, columns[ci])) {
           saveHistory();
@@ -475,10 +469,7 @@ footer {
           else {
             const col = found.col;
             col.splice(col.indexOf(card), 1);
-            if (col.length && !col[col.length - 1].faceUp) {
-              col[col.length - 1].faceUp = true;
-              score += 5;
-            }
+            if (col.length && !col[col.length - 1].faceUp) col[col.length - 1].faceUp = true;
           }
           columns[ci].push(card);
           moves++;
@@ -491,7 +482,6 @@ footer {
     }
   }
 
-  // draw from stock
   function drawFromStock() {
     if (stock.length) {
       for (let i = 0; i < drawCount && stock.length; i++) {
@@ -504,8 +494,6 @@ footer {
       updateStatus();
       render();
     } else {
-      // recycle waste -> stock (faceDown)
-      saveHistory();
       stock = waste.splice(0).map(function (c) { return Object.assign({}, c, { faceUp: false }); });
       stock.reverse();
       moves++;
@@ -514,7 +502,6 @@ footer {
     }
   }
 
-  // HINT utilities
   function clearHints() {
     document.querySelectorAll('.hint-highlight').forEach(function (el) { el.classList.remove('hint-highlight'); });
   }
@@ -562,7 +549,6 @@ footer {
     setTimeout(clearHints, 2500);
   }
 
-  // auto sort to foundations
   function autoSort() {
     var moved;
     do {
@@ -575,7 +561,7 @@ footer {
             waste.pop();
             foundations[i].push(c);
             moves++;
-            score += 10;
+            score += 50;
             moved = true;
             break;
           }
@@ -592,12 +578,9 @@ footer {
               saveHistory();
               col.pop();
               foundations[fi].push(top);
-              if (col.length && !col[col.length - 1].faceUp) {
-                col[col.length - 1].faceUp = true;
-                score += 5;
-              }
+              if (col.length && !col[col.length - 1].faceUp) col[col.length - 1].faceUp = true;
               moves++;
-              score += 10;
+              score += 50;
               moved = true;
               break;
             }
@@ -609,7 +592,6 @@ footer {
     render();
   }
 
-  // win check
   function checkWin(show) {
     if (show === undefined) show = true;
     const total = foundations.reduce(function (s, f) { return s + f.length; }, 0);
@@ -639,7 +621,7 @@ footer {
     el.innerHTML = '';
     el.style.display = 'block';
     var colors = ['#ffd166', '#06d6a0', '#f94144', '#8ecae6', '#ffb4a2'];
-    for (var i = 0; i < 120; i++) {
+    for (var i = 0; i < 80; i++) {
       var c = document.createElement('i');
       c.style.position = 'absolute';
       c.style.left = (Math.random() * 100) + '%';
@@ -653,7 +635,7 @@ footer {
       c.style.animationDelay = (Math.random() * 400) + 'ms';
       el.appendChild(c);
     }
-    setTimeout(stopConfetti, 5000);
+    setTimeout(stopConfetti, 4200);
   }
 
   function stopConfetti() {
@@ -663,7 +645,62 @@ footer {
     el.innerHTML = '';
   }
 
-  // Drag & Tap system (simplified)
+  // Redeal: collect all cards from arrays, shuffle, and redeal into columns
+  function redealAll() {
+    saveHistory();
+    const all = [];
+    // gather from columns
+    for (let i = 0; i < 7; i++) {
+      while (columns[i].length) {
+        all.push(columns[i].pop());
+      }
+    }
+    // gather from foundations
+    for (let i = 0; i < 4; i++) {
+      while (foundations[i].length) {
+        all.push(foundations[i].pop());
+      }
+    }
+    // gather waste
+    while (waste.length) all.push(waste.pop());
+    // gather stock
+    while (stock.length) all.push(stock.pop());
+
+    // shuffle objects
+    shuffle(all);
+
+    // reset
+    stock = [];
+    waste = [];
+    foundations = [[],[],[],[]];
+    columns = [[],[],[],[],[],[],[]];
+
+    // place into columns like initial deal
+    for (let col = 0; col < 7; col++) {
+      for (let i = 0; i <= col; i++) {
+        const card = all.pop();
+        if (!card) break;
+        card.faceUp = (i === col);
+        columns[col].push(card);
+      }
+    }
+
+    // remaining go to stock
+    while (all.length) {
+      const c = all.pop();
+      c.faceUp = false;
+      stock.push(c);
+    }
+
+    moves = 0;
+    seconds = 0;
+    score = 0;
+    updateStatus();
+    render();
+    startTimer();
+  }
+
+  // Drag & Tap system
   var dragging = null;
   var dragClone = null;
 
@@ -700,7 +737,7 @@ footer {
     movingStack.forEach(function (c, idx) {
       var ce = renderCard(c);
       ce.style.position = 'relative';
-      ce.style.top = (idx * 26) + 'px';
+      ce.style.top = (idx * 28) + 'px';
       ce.style.left = '0';
       ce.style.margin = '0';
       ce.style.boxShadow = '0 12px 24px rgba(0,0,0,0.45)';
@@ -743,7 +780,7 @@ footer {
           foundations[fi].push(card);
         }
         moves++;
-        score += 10;
+        score += 50;
         updateStatus();
         render();
         dropped = true;
@@ -804,9 +841,9 @@ footer {
   stockEl.addEventListener('click', function () { saveHistory(); drawFromStock(); });
   document.getElementById('newBtn').addEventListener('click', function () { newGame(); });
   document.getElementById('undoBtn').addEventListener('click', function () { undo(); });
-  document.getElementById('redealBtn').addEventListener('click', function () { redealAll(); });
   hintBtn.addEventListener('click', function () { hint(); });
   autoBtn.addEventListener('click', function () { autoSort(); });
+  document.getElementById('redealBtn').addEventListener('click', function () { redealAll(); });
 
   // settings modal
   var settingsModal = document.getElementById('settingsModal');
@@ -847,71 +884,56 @@ footer {
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // --- Redeal: collect all cards, shuffle, redeal to tableau ---
-  function redealAll() {
-    // Gather all card objects
-    const all = [];
-    // columns
-    for (let i = 0; i < 7; i++) {
-      while (columns[i].length) {
-        all.push(columns[i].pop());
+  // keyboard controls
+  let selectedIndex = -1; // 0..6 columns, -1 waste
+  function selectIndex(i) {
+    // clear prev
+    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+    selectedIndex = i;
+    if (i === -1) {
+      const w = document.querySelector('#waste .card');
+      if (w) w.classList.add('selected');
+    } else {
+      const col = document.querySelector('.column[data-col="' + i + '"]');
+      if (col) {
+        const top = col.querySelector('.card:last-child');
+        if (top) top.classList.add('selected');
       }
     }
-    // foundations
-    for (let i = 0; i < 4; i++) {
-      while (foundations[i].length) {
-        all.push(foundations[i].pop());
-      }
-    }
-    // waste
-    while (waste.length) all.push(waste.pop());
-    // stock
-    while (stock.length) all.push(stock.pop());
-
-    // Shuffle gathered cards
-    shuffleArray(all);
-
-    // Reset state and redeal: put into stock then deal to tableau
-    stock = all.slice();
-    columns = [[],[],[],[],[],[],[]];
-    // deal like newGame
-    for (let i = 0; i < 7; i++) {
-      for (let j = 0; j <= i; j++) {
-        const card = stock.pop();
-        const faceUp = j === i;
-        columns[i].push(Object.assign({}, card, { faceUp: faceUp }));
-      }
-    }
-
-    // reset moves/time? keep moves but reset timer/score adjustments
-    moves = 0;
-    seconds = 0;
-    score = 0;
-    history = [];
-    saveHistory();
-    render();
-    updateStatus();
-    startTimer();
   }
 
-  // --- Keyboard controls ---
-  // Z: undo, R: redeal, N: new, H: hint, A: auto
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'z' || e.key === 'Z') {
-      undo();
-    } else if (e.key === 'r' || e.key === 'R') {
-      redealAll();
-    } else if (e.key === 'n' || e.key === 'N') {
-      newGame();
-    } else if (e.key === 'h' || e.key === 'H') {
-      hint();
-    } else if (e.key === 'a' || e.key === 'A') {
-      autoSort();
-    } else if (e.key === ' ') {
-      // space = draw
-      e.preventDefault();
-      saveHistory();
-      drawFromStock();
+    if (e.key === 'n' || e.key === 'N') newGame();
+    if (e.key === 'z' || e.key === 'Z') undo();
+    if (e.key === 'h' || e.key === 'H') hint();
+    if (e.key === 'a' || e.key === 'A') autoSort();
+    if (e.key === 'r' || e.key === 'R') redealAll();
+    if (e.key === ' ') { e.preventDefault(); autoSort(); }
+    if (e.key === 'ArrowLeft') {
+      if (selectedIndex <= -1) selectedIndex = 6; else selectedIndex = Math.max(-1, selectedIndex - 1);
+      selectIndex(selectedIndex);
+    }
+    if (e.key === 'ArrowRight') {
+      if (selectedIndex >= 6) selectedIndex = -1; else selectedIndex = Math.min(6, selectedIndex + 1);
+      selectIndex(selectedIndex);
+    }
+    if (e.key === 'Enter') {
+      // try move selected to foundation or to other columns
+      if (selectedIndex === -1 && waste.length) {
+        const c = waste[waste.length - 1];
+        // to foundation
+        for (let i = 0; i < 4; i++) if (canPlaceOnFoundation(c, i)) { saveHistory(); waste.pop(); foundations[i].push(c); moves++; score += 50; updateStatus(); render(); return; }
+        // try columns
+        for (let ci = 0; ci < 7; ci++) if (canPlaceOnColumn(c, columns[ci])) { saveHistory(); waste.pop(); columns[ci].push(c); moves++; score += 5; updateStatus(); render(); return; }
+      } else if (selectedIndex >= 0) {
+        const col = columns[selectedIndex];
+        if (!col.length) return;
+        const c = col[col.length - 1];
+        // to foundation
+        for (let i = 0; i < 4; i++) if (canPlaceOnFoundation(c, i)) { saveHistory(); col.pop(); foundations[i].push(c); if (col.length && !col[col.length - 1].faceUp) col[col.length - 1].faceUp = true; moves++; score += 50; updateStatus(); render(); return; }
+        // try other columns
+        for (let ci = 0; ci < 7; ci++) if (ci !== selectedIndex && canPlaceOnColumn(c, columns[ci])) { saveHistory(); col.pop(); columns[ci].push(c); if (col.length && !col[col.length - 1].faceUp) col[col.length - 1].faceUp = true; moves++; score += 5; updateStatus(); render(); return; }
+      }
     }
   });
 
@@ -920,13 +942,13 @@ footer {
 
 })();
 
-// --- Auto vertical stacking for tableau columns (visual) ---
+// --- Auto vertical stacking for tableau columns (Type A) ---
 (function(){
   const STACK_GAP = 26; // px per card
   const board = document.getElementById('board');
 
   const stackCards = () => {
-    const piles = board.querySelectorAll('.column');
+    const piles = board.querySelectorAll('.pile, .column, .tableau');
     piles.forEach(pile => {
       const cards = Array.from(pile.querySelectorAll('.card'));
       cards.forEach((card, i) => {
