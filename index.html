@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>ソリティア（Klondike） — 完全統合版</title>
+ <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS52zXpkvHeVVKTElcquqykAs1EdLJWuKnHeQ&s" sizes="16×16" type="image/png" />    
+<title>ソリティア</title>
 <style>
   :root{
     --bg-dark:#071322; --bg-dark-2:#042233; --panel: rgba(255,255,255,0.04); --accent:#ffd166; --text-light:#e6f0ff; --card-front:#fff; --card-back-1:#b00000; --card-back-2:#d22; --shadow: 0 10px 30px rgba(2,8,23,0.6);
@@ -92,12 +93,20 @@
   .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card-front);color:var(--text-light);padding:18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);z-index:2000}
 
   footer{margin-top:8px;color:rgba(255,255,255,0.6);font-size:0.85rem}
+footer {
+           padding: 30px;
+           text-align: center;
+           font-size: 0.85rem;
+           color: rgba(255,255,255,0.5);
+           border-top: 1px solid rgba(255,255,255,0.1);
+           margin-top: 60px;
+       }    
 </style>
 </head>
 <body data-theme="dark">
   <div class="app" id="app">
     <header>
-      <h1>ソリティア（Klondike） — 完全統合版</h1>
+      <h1>ソリティア</h1>
       <div class="controls">
         <button id="newBtn">新しいゲーム(N)</button>
         <button id="undoBtn">元に戻す(Z)</button>
@@ -151,6 +160,10 @@
     <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><label>めくり数:</label><select id="drawSelect"><option value="1">1枚</option><option value="3">3枚</option></select></div>
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button id="saveSettings">保存</button><button id="cancelSettings">キャンセル</button></div>
   </div>
+
+  <footer>
+       © 2025 STAR CORPORATION - All Rights Reserved.
+   </footer>
 
 <script>
 (function () {
